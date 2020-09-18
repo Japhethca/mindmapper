@@ -7,7 +7,6 @@ import {
   Node,
   DataBinding,
   TextModel,
-  MindMap,
   CommandManagerModel,
   Keys,
   NodeModel,
@@ -18,14 +17,14 @@ import {
 } from "@syncfusion/ej2-react-diagrams";
 import { DataManager } from "@syncfusion/ej2-data";
 
-interface StateItem {
+interface NodeItem {
   id: number;
   Label: string;
   parentId?: number;
 }
 
 function MindMapper() {
-  const [data, setData] = React.useState<StateItem[]>([
+  const [data, setData] = React.useState<NodeItem[]>([
     {
       id: 1,
       Label: "Start Mapping",
@@ -54,26 +53,26 @@ function MindMapper() {
           execute: function () {
             const parent =
               diagramInstance.selectedItems.nodes &&
-              (diagramInstance.selectedItems.nodes[0].data as StateItem);
+              (diagramInstance.selectedItems.nodes[0].data as NodeItem);
 
             if (!parent) {
               return;
             }
 
-            let updatedData = data;
+            let updatedNodeItems = data;
             if (
               diagramInstance.addInfo &&
-              (diagramInstance.addInfo as StateItem[]).length > 0
+              (diagramInstance.addInfo as NodeItem[]).length > 0
             ) {
-              for (let item of diagramInstance.addInfo as StateItem[]) {
-                updatedData = updatedData.map((item2) => {
+              for (let item of diagramInstance.addInfo as NodeItem[]) {
+                updatedNodeItems = updatedNodeItems.map((item2) => {
                   if (item.id === item2.id) return item;
                   return item2;
                 });
               }
             }
             let lastId: number = 1;
-            for (let item of updatedData) {
+            for (let item of updatedNodeItems) {
               if (item.id >= lastId) {
                 lastId += 1;
               }
@@ -84,7 +83,7 @@ function MindMapper() {
               Label: "Enter text",
             };
 
-            setData([...updatedData, newNode]);
+            setData([...updatedNodeItems, newNode]);
           },
           gesture: {
             key: Keys.Tab,
@@ -107,7 +106,6 @@ function MindMapper() {
         Label: "string";
       }).Label,
     };
-
     obj.style = {
       fill: "#f0f0f0",
       strokeColor: "none",
@@ -124,7 +122,7 @@ function MindMapper() {
       top: 10,
       bottom: 10,
     };
-
+    // root node styles
     if ((obj.data as { id: number }).id === 1) {
       obj.backgroundColor = "#c94e4e";
       obj.style = {
@@ -134,6 +132,7 @@ function MindMapper() {
       };
     }
 
+    // immediate node child styles
     if ((obj.data as { parentId: number }).parentId === 1) {
       obj.style.color = "#fff";
       obj.backgroundColor = "#575151";
@@ -163,11 +162,10 @@ function MindMapper() {
     if (!elem) {
       return;
     }
-    const node = elem.data as StateItem;
+    const node = elem.data as NodeItem;
     if (!node) return;
-    let prevUpdate = diagramInstance.addInfo as StateItem[];
-    console.log(prevUpdate, "prevupdate");
-    if (!prevUpdate) {
+    let prevEditedNodes = diagramInstance.addInfo as NodeItem[];
+    if (!prevEditedNodes) {
       diagramInstance.addInfo = [
         {
           ...node,
@@ -177,8 +175,8 @@ function MindMapper() {
       return;
     }
     let updatedInMap: boolean = false;
-    if (prevUpdate.length > 0) {
-      prevUpdate = prevUpdate.map((n) => {
+    if (prevEditedNodes.length > 0) {
+      prevEditedNodes = prevEditedNodes.map((n) => {
         if (n.id === node.id) {
           updatedInMap = true;
           return {
@@ -187,14 +185,14 @@ function MindMapper() {
           };
         }
         return n;
-      }) as StateItem[];
+      }) as NodeItem[];
     }
     if (updatedInMap) {
-      diagramInstance.addInfo = prevUpdate;
+      diagramInstance.addInfo = prevEditedNodes;
       return;
     }
     diagramInstance.addInfo = [
-      ...prevUpdate,
+      ...prevEditedNodes,
       {
         ...node,
         Label: e?.newValue,
@@ -213,7 +211,6 @@ function MindMapper() {
       height={"550px"}
       layout={{
         type: "HierarchicalTree",
-        // horizontalAlignment:"Right",
         orientation: "LeftToRight",
       }}
       dataSourceSettings={{
@@ -235,7 +232,7 @@ function MindMapper() {
       commandManager={getCommandManagerSettings()}
       textEdit={handleTextEdit}
     >
-      <Inject services={[DataBinding, MindMap, HierarchicalTree]} />
+      <Inject services={[DataBinding, HierarchicalTree]} />
     </DiagramComponent>
   );
 }
