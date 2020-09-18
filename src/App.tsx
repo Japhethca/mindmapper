@@ -10,6 +10,9 @@ function App() {
       <h2
         style={{
           marginTop: "4rem",
+          color: "#5d5d5a",
+          fontWeight: "bold",
+          fontSize: "2.2em",
         }}
       >
         Mind Mapper

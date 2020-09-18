@@ -96,34 +96,49 @@ function MindMapper() {
   };
 
   const getNodeDefaults = (obj: Node) => {
+    obj.constraints =
+      NodeConstraints.Default &
+      ~NodeConstraints.Rotate &
+      ~NodeConstraints.Drag &
+      ~NodeConstraints.Resize;
     obj.shape = {
       type: "Text",
       content: (obj.data as {
         Label: "string";
       }).Label,
     };
+
     obj.style = {
-      fill: "#6BA5D7",
+      fill: "#f0f0f0",
       strokeColor: "none",
       strokeWidth: 2,
-      color: "#fff",
+      color: "#303a52",
       fontSize: 20,
-      bold: true,
     };
-    obj.borderColor = "white";
-    obj.backgroundColor = "#6BA5D7";
+    obj.borderColor = "#f0f0f0";
+    obj.backgroundColor = "#f0f0f0";
     obj.borderWidth = 1;
     (obj.shape as TextModel).margin = {
-      left: 5,
-      right: 5,
-      top: 5,
-      bottom: 5,
+      left: 10,
+      right: 10,
+      top: 10,
+      bottom: 10,
     };
-    obj.constraints =
-      NodeConstraints.Default &
-      ~NodeConstraints.Rotate &
-      ~NodeConstraints.Drag &
-      ~NodeConstraints.Resize;
+
+    if ((obj.data as { id: number }).id === 1) {
+      obj.backgroundColor = "#c94e4e";
+      obj.style = {
+        fill: "#c94e4e",
+        color: "#fff",
+        bold: true,
+      };
+    }
+
+    if ((obj.data as { parentId: number }).parentId === 1) {
+      obj.style.color = "#fff";
+      obj.backgroundColor = "#575151";
+      obj.style.fill = "#575151";
+    }
     return obj;
   };
 
@@ -132,12 +147,12 @@ function MindMapper() {
     diagram: Diagram
   ) => {
     connector.style = {
-      strokeColor: "#6BA5D7",
-      strokeWidth: 2,
+      strokeColor: "#5d5d5a",
+      strokeWidth: 1,
     };
     if (connector.targetDecorator && connector.targetDecorator.style) {
-      connector.targetDecorator.style.fill = "#6BA5D7";
-      connector.targetDecorator.style.strokeColor = "red";
+      connector.targetDecorator.style.fill = "#ffa45c";
+      connector.targetDecorator.style.strokeColor = "#ffa45c";
     }
     connector.type = "Bezier";
     return connector;
@@ -189,6 +204,7 @@ function MindMapper() {
 
   return (
     <DiagramComponent
+      backgroundColor="#f0f0f0"
       ref={(diagram: DiagramComponent) => {
         diagramInstance = diagram;
       }}
@@ -206,11 +222,14 @@ function MindMapper() {
         dataManager: new DataManager(data),
         root: String(1),
       }}
-      snapSettings={
-        {
-          // constraints: SnapConstraints.None,
-        }
-      }
+      snapSettings={{
+        constraints: SnapConstraints.None,
+      }}
+      pageSettings={{
+        background: {
+          color: "#f0f0f0",
+        },
+      }}
       getNodeDefaults={getNodeDefaults}
       getConnectorDefaults={getConnectorDefaults}
       commandManager={getCommandManagerSettings()}
