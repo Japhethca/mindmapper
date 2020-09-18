@@ -15,6 +15,7 @@ import {
   CommandManagerModel,
   Keys,
   NodeModel,
+  NodeConstraints,
 } from "@syncfusion/ej2-react-diagrams";
 import { DataManager, Query } from "@syncfusion/ej2-data";
 
@@ -50,7 +51,26 @@ function MindMapper() {
           },
           //Command handler
           execute: function () {
-            setData([...data, { id: 2, parentId: 1, Label: "Testing" }]);
+            console.log(
+              diagramInstance.selectedObject.actualObject.data,
+              "this is it"
+            );
+            const parent = diagramInstance.selectedObject.actualObject
+              .data as StateProps;
+
+            let lastId: number = 1;
+            for (let item of data) {
+              if (item.id >= lastId) {
+                lastId += 1;
+              }
+            }
+            const newNode = {
+              id: lastId,
+              parentId: parent.id,
+              Label: `Testing ${lastId}`,
+            };
+            console.log(newNode);
+            setData([...data, newNode]);
           },
           gesture: {
             key: Keys.Tab,
@@ -102,6 +122,7 @@ function MindMapper() {
           top: 5,
           bottom: 5,
         };
+        obj.constraints = NodeConstraints.Default & ~NodeConstraints.Rotate;
         return obj;
       }}
       getConnectorDefaults={(connector: ConnectorModel, diagram: Diagram) => {
@@ -112,10 +133,12 @@ function MindMapper() {
 
         // connector.targetDecorator.style.fill = "#6BA5D7";
         // connector.targetDecorator.style.strokeColor = "#6BA5D7";
-        connector.type = "Orthogonal";
+        connector.type = "Bezier";
         return connector;
       }}
       commandManager={getCommandManagerSettings()}
+      //   selectionChange={(e) => console.log(e, "seelection change")}
+      expandStateChange={(e) => console.log(e, "expanded change")}
     >
       <Inject services={[DataBinding, MindMap]} />
     </DiagramComponent>
