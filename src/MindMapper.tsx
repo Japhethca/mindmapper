@@ -6,32 +6,32 @@ import {
   ConnectorModel,
   Node,
   DataBinding,
-  //   LayoutType,
-  //   Rect,
-  //   HorizontalAlignment,
-  //   VerticalAlignment,
   TextModel,
   MindMap,
   CommandManagerModel,
   Keys,
   NodeModel,
   NodeConstraints,
+  ITextEditEventArgs,
+  SnapConstraints,
+  HierarchicalTree,
 } from "@syncfusion/ej2-react-diagrams";
-import { DataManager, Query } from "@syncfusion/ej2-data";
+import { DataManager } from "@syncfusion/ej2-data";
 
-interface StateProps {
+interface StateItem {
   id: number;
   Label: string;
   parentId?: number;
 }
 
 function MindMapper() {
-  const [data, setData] = React.useState<StateProps[]>([
+  const [data, setData] = React.useState<StateItem[]>([
     {
       id: 1,
-      Label: "StackPanel",
+      Label: "Start Mapping",
     },
   ]);
+
   let diagramInstance: DiagramComponent;
 
   const getCommandManagerSettings = (): CommandManagerModel => {
@@ -42,24 +42,38 @@ function MindMapper() {
           parameter: "node",
           //Method to define whether the command can be executed at the current moment
           canExecute: function () {
-            //Defines that the clone command can be executed, if and only if the selection list is not empty.
-            console.log(diagramInstance.selectedObject.actualObject);
-            if (diagramInstance.selectedObject.actualObject) {
+            if (
+              diagramInstance.selectedItems.nodes &&
+              diagramInstance.selectedItems.nodes.length > 0
+            ) {
               return true;
             }
             return false;
           },
           //Command handler
           execute: function () {
-            console.log(
-              diagramInstance.selectedObject.actualObject.data,
-              "this is it"
-            );
-            const parent = diagramInstance.selectedObject.actualObject
-              .data as StateProps;
+            const parent =
+              diagramInstance.selectedItems.nodes &&
+              (diagramInstance.selectedItems.nodes[0].data as StateItem);
 
+            if (!parent) {
+              return;
+            }
+
+            let updatedData = data;
+            if (
+              diagramInstance.addInfo &&
+              (diagramInstance.addInfo as StateItem[]).length > 0
+            ) {
+              for (let item of diagramInstance.addInfo as StateItem[]) {
+                updatedData = updatedData.map((item2) => {
+                  if (item.id === item2.id) return item;
+                  return item2;
+                });
+              }
+            }
             let lastId: number = 1;
-            for (let item of data) {
+            for (let item of updatedData) {
               if (item.id >= lastId) {
                 lastId += 1;
               }
@@ -67,10 +81,10 @@ function MindMapper() {
             const newNode = {
               id: lastId,
               parentId: parent.id,
-              Label: `Testing ${lastId}`,
+              Label: "Enter text",
             };
-            console.log(newNode);
-            setData([...data, newNode]);
+
+            setData([...updatedData, newNode]);
           },
           gesture: {
             key: Keys.Tab,
@@ -80,6 +94,99 @@ function MindMapper() {
     };
     return commandManager;
   };
+
+  const getNodeDefaults = (obj: Node) => {
+    obj.shape = {
+      type: "Text",
+      content: (obj.data as {
+        Label: "string";
+      }).Label,
+    };
+    obj.style = {
+      fill: "#6BA5D7",
+      strokeColor: "none",
+      strokeWidth: 2,
+      color: "#fff",
+      fontSize: 20,
+      bold: true,
+    };
+    obj.borderColor = "white";
+    obj.backgroundColor = "#6BA5D7";
+    obj.borderWidth = 1;
+    (obj.shape as TextModel).margin = {
+      left: 5,
+      right: 5,
+      top: 5,
+      bottom: 5,
+    };
+    obj.constraints =
+      NodeConstraints.Default &
+      ~NodeConstraints.Rotate &
+      ~NodeConstraints.Drag &
+      ~NodeConstraints.Resize;
+    return obj;
+  };
+
+  const getConnectorDefaults = (
+    connector: ConnectorModel,
+    diagram: Diagram
+  ) => {
+    connector.style = {
+      strokeColor: "#6BA5D7",
+      strokeWidth: 2,
+    };
+    if (connector.targetDecorator && connector.targetDecorator.style) {
+      connector.targetDecorator.style.fill = "#6BA5D7";
+      connector.targetDecorator.style.strokeColor = "red";
+    }
+    connector.type = "Bezier";
+    return connector;
+  };
+
+  const handleTextEdit = (e: ITextEditEventArgs | undefined) => {
+    const elem = e?.element as NodeModel;
+    if (!elem) {
+      return;
+    }
+    const node = elem.data as StateItem;
+    if (!node) return;
+    let prevUpdate = diagramInstance.addInfo as StateItem[];
+    console.log(prevUpdate, "prevupdate");
+    if (!prevUpdate) {
+      diagramInstance.addInfo = [
+        {
+          ...node,
+          Label: e?.newValue,
+        },
+      ];
+      return;
+    }
+    let updatedInMap: boolean = false;
+    if (prevUpdate.length > 0) {
+      prevUpdate = prevUpdate.map((n) => {
+        if (n.id === node.id) {
+          updatedInMap = true;
+          return {
+            ...n,
+            Label: e?.newValue,
+          };
+        }
+        return n;
+      }) as StateItem[];
+    }
+    if (updatedInMap) {
+      diagramInstance.addInfo = prevUpdate;
+      return;
+    }
+    diagramInstance.addInfo = [
+      ...prevUpdate,
+      {
+        ...node,
+        Label: e?.newValue,
+      },
+    ];
+  };
+
   return (
     <DiagramComponent
       ref={(diagram: DiagramComponent) => {
@@ -88,59 +195,28 @@ function MindMapper() {
       id="diagram"
       width={"100%"}
       height={"550px"}
-      //Uses layout to auto-arrange nodes on the diagram page
       layout={{
-        //Sets layout type
-        type: "MindMap",
+        type: "HierarchicalTree",
+        // horizontalAlignment:"Right",
+        orientation: "LeftToRight",
       }}
-      //Configures data source for diagram
       dataSourceSettings={{
         id: "id",
         parentId: "parentId",
         dataManager: new DataManager(data),
         root: String(1),
       }}
-      //Sets the default properties for nodes and connectors
-      getNodeDefaults={(obj: Node) => {
-        obj.shape = {
-          type: "Text",
-          content: (obj.data as {
-            Label: "string";
-          }).Label,
-        };
-        obj.style = {
-          fill: "#6BA5D7",
-          strokeColor: "none",
-          strokeWidth: 2,
-        };
-        obj.borderColor = "white";
-        obj.backgroundColor = "#6BA5D7";
-        obj.borderWidth = 1;
-        (obj.shape as TextModel).margin = {
-          left: 5,
-          right: 5,
-          top: 5,
-          bottom: 5,
-        };
-        obj.constraints = NodeConstraints.Default & ~NodeConstraints.Rotate;
-        return obj;
-      }}
-      getConnectorDefaults={(connector: ConnectorModel, diagram: Diagram) => {
-        connector.style = {
-          strokeColor: "#6BA5D7",
-          strokeWidth: 2,
-        };
-
-        // connector.targetDecorator.style.fill = "#6BA5D7";
-        // connector.targetDecorator.style.strokeColor = "#6BA5D7";
-        connector.type = "Bezier";
-        return connector;
-      }}
+      snapSettings={
+        {
+          // constraints: SnapConstraints.None,
+        }
+      }
+      getNodeDefaults={getNodeDefaults}
+      getConnectorDefaults={getConnectorDefaults}
       commandManager={getCommandManagerSettings()}
-      //   selectionChange={(e) => console.log(e, "seelection change")}
-      expandStateChange={(e) => console.log(e, "expanded change")}
+      textEdit={handleTextEdit}
     >
-      <Inject services={[DataBinding, MindMap]} />
+      <Inject services={[DataBinding, MindMap, HierarchicalTree]} />
     </DiagramComponent>
   );
 }
